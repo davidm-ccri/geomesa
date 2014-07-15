@@ -61,7 +61,7 @@ class BatchMultiScanner(in: Scanner,
             inQ.drainTo(entries)
             val ranges = (List(entry) ++ entries).map(joinFn)
             out.setRanges(ranges)
-            out.iterator().foreach(outQ.put(_))
+            out.iterator().foreach(outQ.put)
           }
         }
       } catch {
@@ -90,7 +90,7 @@ class BatchMultiScanner(in: Scanner,
       if (prefetch == null) {
         // loop while we might have another and we haven't set prefetch
         while (mightHaveAnother && prefetch == null) {
-          prefetch = outQ.poll(1, TimeUnit.MILLISECONDS)
+          prefetch = outQ.poll
         }
       }
     }
