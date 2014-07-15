@@ -1,7 +1,7 @@
 package geomesa.core.util
 
-import java.util.concurrent.{TimeUnit, Executors}
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.{Executors, TimeUnit}
 
 import com.google.common.collect.Queues
 import com.typesafe.scalalogging.slf4j.Logging
@@ -15,11 +15,11 @@ class BatchMultiScanner(in: Scanner,
                         joinFn: java.util.Map.Entry[Key, Value] => AccRange)
   extends Iterable[java.util.Map.Entry[Key, Value]] with AutoCloseable with Logging {
 
-  type E = java.util.Map.Entry[Key, Value]
+  type KVEntry = java.util.Map.Entry[Key, Value]
   val inExecutor  = Executors.newSingleThreadExecutor()
   val outExecutor = Executors.newSingleThreadExecutor()
-  val inQ  = Queues.newLinkedBlockingQueue[E](32768)
-  val outQ = Queues.newArrayBlockingQueue[E](32768)
+  val inQ  = Queues.newLinkedBlockingQueue[KVEntry](32768)
+  val outQ = Queues.newArrayBlockingQueue[KVEntry](32768)
   val inDone  = new AtomicBoolean(false)
   val outDone = new AtomicBoolean(false)
 
@@ -33,20 +33,19 @@ class BatchMultiScanner(in: Scanner,
     }
   })
 
-  def notDone = !inDone.get
-  def inQNonEmpty = !inQ.isEmpty
+  def mightHaveAnother = !inDone.get || !inQ.isEmpty
 
   outExecutor.submit(new Runnable {
     override def run(): Unit = {
       try {
-        while(notDone || inQNonEmpty) {
+        while (mightHaveAnother) {
           val entry = inQ.take()
-          if(entry != null) {
-            val entries = new collection.mutable.ListBuffer[E]()
+          if (entry != null) {
+            val entries = new collection.mutable.ListBuffer[KVEntry]()
             inQ.drainTo(entries)
             val ranges = (List(entry) ++ entries).map(joinFn)
             out.setRanges(ranges)
-            out.iterator().foreach(e => outQ.put(e))
+            out.iterator().foreach(outQ.put(_))
           }
         }
       } catch {
@@ -64,31 +63,32 @@ class BatchMultiScanner(in: Scanner,
     out.close()
   }
 
-  override def iterator: Iterator[E] = new Iterator[E] {
+  override def iterator: Iterator[KVEntry] = new Iterator[KVEntry] {
 
-    // must block since we don't know that we'll actually find anything for this itr
-    override def hasNext: Boolean = {
-      if(prefetch == null)
-        findAnother()
-
-      prefetch != null
-    }
-
-    var prefetch: E = null
+    var prefetch: KVEntry = null
 
     // Indicate there MAY be one more in the outQ but not for sure
     def mightHaveAnother = !outDone.get || !outQ.isEmpty
 
-    def findAnother() = {
-      // poll while we might have another and the prefected is null
-      while(mightHaveAnother && prefetch == null) {
-        prefetch = outQ.poll(1, TimeUnit.MILLISECONDS)
+    def prefetchIfNull() = {
+      if (prefetch == null) {
+        // loop while we might have another and we haven't set prefetch
+        while (mightHaveAnother && prefetch == null) {
+          prefetch = outQ.poll(1, TimeUnit.MILLISECONDS)
+        }
       }
     }
 
-    override def next(): E = {
-      if(prefetch == null)
-        findAnother()
+    // must attempt a prefetch sicne we don't know whether or not the outQ
+    // will actually be filled with an item (filters may not match and the
+    // in scanner may never return a range)
+    override def hasNext(): Boolean = {
+      prefetchIfNull()
+      prefetch != null
+    }
+
+    override def next(): KVEntry = {
+      prefetchIfNull()
 
       val ret = prefetch
       prefetch = null

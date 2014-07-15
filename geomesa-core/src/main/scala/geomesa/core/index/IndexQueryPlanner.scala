@@ -254,6 +254,8 @@ case class IndexQueryPlanner(keyPlanner: KeyPlanner,
     val recordScanner = acc.createRecordScanner(featureType)
     configureSimpleFeatureFilteringIterator(recordScanner, featureType, None, derivedQuery)
 
+    // function to join the attribute index scan results to the record table
+    // since the row id of the record table is in the CF just grab that
     val joinFunction = (kv: java.util.Map.Entry[Key, Value]) => new AccRange(kv.getKey.getColumnFamily)
     val bms = new BatchMultiScanner(attrScanner, recordScanner, joinFunction)
 
