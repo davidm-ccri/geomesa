@@ -12,7 +12,7 @@ import geomesa.core.data._
 import geomesa.core.filter._
 import geomesa.core.index.QueryHints._
 import geomesa.core.iterators.{FEATURE_ENCODING, _}
-import geomesa.core.util.{CloseableIterator, SelfClosingBatchScanner}
+import geomesa.core.util.{BatchMultiScanner, CloseableIterator, SelfClosingBatchScanner}
 import org.apache.accumulo.core.client.{BatchScanner, IteratorSetting}
 import org.apache.accumulo.core.data.{Key, Value, Range => AccRange}
 import org.apache.accumulo.core.iterators.user.RegExFilter
@@ -258,24 +258,18 @@ case class IndexQueryPlanner(keyPlanner: KeyPlanner,
     logger.trace(s"Attribute Scan Range: ${range.toString}")
     attrScanner.setRange(range)
 
-    import scala.collection.JavaConversions._
-    val ranges = attrScanner.iterator.map(_.getKey.getColumnFamily).map(new AccRange(_))
+    val recordScanner = dataStore.createRecordScanner(featureType)
+    configureSimpleFeatureFilteringIterator(recordScanner, featureType, None, derivedQuery)
 
-    val recScanner = if(ranges.hasNext) {
-      val recordScanner = dataStore.createRecordScanner(featureType)
-      recordScanner.setRanges(ranges.toList)
-      configureSimpleFeatureFilteringIterator(recordScanner, featureType, None, derivedQuery)
-      Some(recordScanner)
-    } else None
+    val joinFunction = (kv: java.util.Map.Entry[Key, Value]) => new AccRange(kv.getKey.getColumnFamily)
+    val bms = new BatchMultiScanner(attrScanner, recordScanner, joinFunction)
 
-    val iter = recScanner.map(_.iterator()).getOrElse(Iterators.emptyIterator[Entry[Key, Value]])
-
-    def close(): Unit = {
-      recScanner.foreach(_.close)
+    def closeScanners(): Unit = {
+      recordScanner.close
       attrScanner.close
     }
 
-    CloseableIterator(iter, close)
+    CloseableIterator(bms.iterator, closeScanners)
   }
 
   def stIdxQuery(ds: AccumuloDataStore, query: Query, rewrittenCQL: Filter, filterVisitor: FilterToAccumulo) = {
