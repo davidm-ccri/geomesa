@@ -264,12 +264,9 @@ case class IndexQueryPlanner(keyPlanner: KeyPlanner,
     val joinFunction = (kv: java.util.Map.Entry[Key, Value]) => new AccRange(kv.getKey.getColumnFamily)
     val bms = new BatchMultiScanner(attrScanner, recordScanner, joinFunction)
 
-    def closeScanners(): Unit = {
-      recordScanner.close
-      attrScanner.close
-    }
+    def closeBms() = bms.close()
 
-    CloseableIterator(bms.iterator, closeScanners)
+    CloseableIterator(bms.iterator, closeBms)
   }
 
   def stIdxQuery(ds: AccumuloDataStore, query: Query, rewrittenCQL: Filter, filterVisitor: FilterToAccumulo) = {

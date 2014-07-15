@@ -1,27 +1,27 @@
 package geomesa.core.util
 
-import java.util.concurrent.Executors
+import java.util.concurrent.{TimeUnit, Executors}
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.google.common.collect.{Lists, Queues}
+import com.google.common.collect.Queues
+import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.client.{BatchScanner, Scanner}
 import org.apache.accumulo.core.data.{Key, Value, Range => AccRange}
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.ListBuffer
 
 class BatchMultiScanner(in: Scanner,
                         out: BatchScanner,
                         joinFn: java.util.Map.Entry[Key, Value] => AccRange)
-  extends Iterable[java.util.Map.Entry[Key, Value]] {
+  extends Iterable[java.util.Map.Entry[Key, Value]] with AutoCloseable with Logging {
 
   type E = java.util.Map.Entry[Key, Value]
   val inExecutor  = Executors.newSingleThreadExecutor()
   val outExecutor = Executors.newSingleThreadExecutor()
-  val inQ  = Queues.newArrayBlockingQueue[E](2048)
-  val outQ = Queues.newArrayBlockingQueue[E](2048)
-  var inDone = new AtomicBoolean(false)
-  var outDone = new AtomicBoolean(false)
+  val inQ  = Queues.newLinkedBlockingQueue[E](32768)
+  val outQ = Queues.newArrayBlockingQueue[E](32768)
+  val inDone  = new AtomicBoolean(false)
+  val outDone = new AtomicBoolean(false)
 
   inExecutor.submit(new Runnable {
     override def run(): Unit = {
@@ -36,34 +36,63 @@ class BatchMultiScanner(in: Scanner,
   def notDone = !inDone.get
   def inQNonEmpty = !inQ.isEmpty
 
-  // TODO parallelize so we can read while consuming the incoming itr - currently this fails tests
   outExecutor.submit(new Runnable {
     override def run(): Unit = {
-      // Todo can we not do a list buffer maybe with a fold
-      val allRanges = new ListBuffer[AccRange]
-      while(notDone || inQNonEmpty) {
-        // block until data is ready
-        val batch = Lists.newLinkedList[E]()
-        val count = inQ.drainTo(batch)
-        val ranges = batch.take(count).map(e => joinFn(e))
-        allRanges ++= ranges
+      try {
+        while(notDone || inQNonEmpty) {
+          val entry = inQ.take()
+          if(entry != null) {
+            val entries = new collection.mutable.ListBuffer[E]()
+            inQ.drainTo(entries)
+            val ranges = (List(entry) ++ entries).map(joinFn)
+            out.setRanges(ranges)
+            out.iterator().foreach(e => outQ.put(e))
+          }
+        }
+      } catch {
+        case _: InterruptedException =>
+      } finally {
+        outDone.set(true)
       }
-      out.setRanges(allRanges)
-      out.iterator().foreach(outQ.add)
-      outDone.set(true)
     }
   })
 
+  override def close() = {
+    if (!inExecutor.isShutdown) inExecutor.shutdownNow()
+    if (!outExecutor.isShutdown) outExecutor.shutdownNow()
+    in.close()
+    out.close()
+  }
+
   override def iterator: Iterator[E] = new Iterator[E] {
+
+    // must block since we don't know that we'll actually find anything for this itr
     override def hasNext: Boolean = {
-      val ret = !(outDone.get && outQ.isEmpty)
-      if(!ret) {
-        inExecutor.shutdownNow()
-        outExecutor.shutdownNow()
-      }
-      ret
+      if(prefetch == null)
+        findAnother()
+
+      prefetch != null
     }
 
-    override def next(): E = outQ.take()
+    var prefetch: E = null
+
+    // Indicate there MAY be one more in the outQ but not for sure
+    def mightHaveAnother = !outDone.get || !outQ.isEmpty
+
+    def findAnother() = {
+      // poll while we might have another and the prefected is null
+      while(mightHaveAnother && prefetch == null) {
+        prefetch = outQ.poll(1, TimeUnit.MILLISECONDS)
+      }
+    }
+
+    override def next(): E = {
+      if(prefetch == null)
+        findAnother()
+
+      val ret = prefetch
+      prefetch = null
+      ret
+    }
   }
 }
