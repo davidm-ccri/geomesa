@@ -28,14 +28,20 @@ import scala.collection.JavaConversions._
 
 class BatchMultiScanner(in: Scanner,
                         out: BatchScanner,
-                        joinFn: java.util.Map.Entry[Key, Value] => AccRange)
+                        joinFn: java.util.Map.Entry[Key, Value] => AccRange,
+                        batchSize: Int = 32768)
   extends Iterable[java.util.Map.Entry[Key, Value]] with AutoCloseable with Logging {
+
+  if(batchSize < 1) {
+    throw new IllegalArgumentException(f"Illegal batchSize($batchSize%d). Value must be > 0")
+  }
+  logger.trace(f"Creating BatchMultiScanner with batchSize $batchSize%d")
 
   type KVEntry = java.util.Map.Entry[Key, Value]
   val inExecutor  = Executors.newSingleThreadExecutor()
   val outExecutor = Executors.newSingleThreadExecutor()
-  val inQ  = Queues.newLinkedBlockingQueue[KVEntry](32768)
-  val outQ = Queues.newArrayBlockingQueue[KVEntry](32768)
+  val inQ  = Queues.newLinkedBlockingQueue[KVEntry](batchSize)
+  val outQ = Queues.newArrayBlockingQueue[KVEntry](batchSize)
   val inDone  = new AtomicBoolean(false)
   val outDone = new AtomicBoolean(false)
 
@@ -55,7 +61,7 @@ class BatchMultiScanner(in: Scanner,
     override def run(): Unit = {
       try {
         while (mightHaveAnother) {
-          val entry = inQ.take()
+          val entry = inQ.poll()
           if (entry != null) {
             val entries = new collection.mutable.ListBuffer[KVEntry]()
             inQ.drainTo(entries)

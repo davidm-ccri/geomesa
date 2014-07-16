@@ -3,7 +3,6 @@ package geomesa.core.index
 import java.nio.charset.StandardCharsets
 import java.util.Map.Entry
 
-import com.google.common.collect.Iterators
 import com.typesafe.scalalogging.slf4j.Logging
 import com.vividsolutions.jts.geom.Polygon
 import geomesa.core._
@@ -12,7 +11,7 @@ import geomesa.core.filter._
 import geomesa.core.index.QueryHints._
 import geomesa.core.iterators.{FEATURE_ENCODING, _}
 import geomesa.core.util.{BatchMultiScanner, CloseableIterator, SelfClosingBatchScanner}
-import org.apache.accumulo.core.client.{Scanner, BatchScanner, IteratorSetting}
+import org.apache.accumulo.core.client.{BatchScanner, IteratorSetting, Scanner}
 import org.apache.accumulo.core.data.{Key, Value, Range => AccRange}
 import org.apache.accumulo.core.iterators.user.RegExFilter
 import org.apache.hadoop.io.Text
@@ -457,7 +456,7 @@ case class IndexQueryPlanner(keyPlanner: KeyPlanner,
     map(i => Random.nextPrintableChar()).mkString
 
   def planQuery(bs: BatchScanner, filter: KeyPlanningFilter, output: String => Unit): BatchScanner = {
-    output(s"Planning query/configurating batch scanner: $bs")
+    output(s"Planning query/configuring batch scanner: $bs")
     val keyPlan = keyPlanner.getKeyPlan(filter, output)
     val columnFamilies = cfPlanner.getColumnFamiliesToFetch(filter)
 
