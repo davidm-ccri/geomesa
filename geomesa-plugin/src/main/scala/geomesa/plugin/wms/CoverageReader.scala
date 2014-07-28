@@ -43,10 +43,8 @@ import util.Random
 
 
 object CoverageReader {
-  val GeoServerDateFormat =
-    DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-  val DefaultDateString =
-    GeoServerDateFormat.print(new DateTime(DateTimeZone.forID("UTC")))
+  val GeoServerDateFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+  val DefaultDateString = GeoServerDateFormat.print(new DateTime(DateTimeZone.forID("UTC")))
 }
 
 import CoverageReader._

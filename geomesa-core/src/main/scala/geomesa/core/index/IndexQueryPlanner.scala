@@ -1,6 +1,5 @@
 package geomesa.core.index
 
-import java.lang
 import java.nio.charset.StandardCharsets
 import java.util.Map.Entry
 
@@ -166,18 +165,16 @@ case class IndexQueryPlanner(keyPlanner: KeyPlanner,
     }
   }
 
-  def attrIdxQueryEligible(filt: Filter): lang.Boolean = filt match {
+  def attrIdxQueryEligible(filt: Filter): Boolean = filt match {
     case filter: PropertyIsEqualTo =>
       val one = filter.getExpression1
       val two = filter.getExpression2
       val prop = (one, two) match {
         case (p: PropertyName, _) => Some(p.getPropertyName)
         case (_, p: PropertyName) => Some(p.getPropertyName)
-        case (_, _) =>
-          logger.warn(s"*****JNH $filter ****")
-          None
+        case (_, _)               => None
       }
-      prop.map(p => featureType.getDescriptor(p).isIndexed).getOrElse(lang.Boolean.FALSE)
+      prop.exists(featureType.getDescriptor(_).isIndexed)
 
     case filter: PropertyIsLike =>
       val prop = filter.getExpression.asInstanceOf[PropertyName].getPropertyName
