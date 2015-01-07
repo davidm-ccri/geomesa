@@ -21,9 +21,9 @@ import org.apache.accumulo.core.data.{Key, Value}
 trait KeyAggregator {
   def reset()
 
-  def collect(key: Key, value: Value)
+  def collect(key: Key, value: Value): Unit
 
   def aggregate: Value
 
-  def setOpt(opt: String, value: String)
+  def setOpt(opt: String, value: String): Unit
 }

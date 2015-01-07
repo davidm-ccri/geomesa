@@ -21,7 +21,7 @@ import java.util.{List => JList}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.data.{Key, Value, Range => AccRange}
 import org.geotools.data.Query
-import org.geotools.factory.Hints.{ClassKey, IntegerKey}
+import org.geotools.factory.Hints.{OptionKey, ClassKey, IntegerKey}
 import org.geotools.filter.identity.FeatureIdImpl
 import org.geotools.geometry.jts.ReferencedEnvelope
 import org.joda.time.DateTime
@@ -91,10 +91,13 @@ package object index {
     val WIDTH_KEY   = new IntegerKey(256)
     val HEIGHT_KEY  = new IntegerKey(256)
     val BBOX_KEY    = new ClassKey(classOf[ReferencedEnvelope])
-    val TEMPORAL_DENSITY_KEY = new ClassKey(classOf[java.lang.Boolean])
 
+    val TEMPORAL_DENSITY_KEY = new ClassKey(classOf[java.lang.Boolean])
     val TIME_INTERVAL_KEY = new ClassKey(classOf[org.joda.time.Interval])
     val TIME_BUCKETS_KEY = new IntegerKey(256)
+
+    val MAP_ATTRIBUTE_OPTION_IDENTIFIER = "map_attribute"
+    val AGGREGATE_MAP_KEY = new OptionKey(MAP_ATTRIBUTE_OPTION_IDENTIFIER)
   }
 
   type ExplainerOutputType = ( => String) => Unit
