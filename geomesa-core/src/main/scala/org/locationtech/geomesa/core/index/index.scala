@@ -16,18 +16,18 @@
 
 package org.locationtech.geomesa.core
 
-import java.util.{List => JList}
-
 import com.typesafe.scalalogging.slf4j.Logging
-import org.apache.accumulo.core.data.{Key, Value, Range => AccRange}
+import org.apache.accumulo.core.data.{Key, Range => AccRange, Value}
 import org.geotools.data.Query
-import org.geotools.factory.Hints.{OptionKey, ClassKey, IntegerKey}
+import org.geotools.factory.Hints.{ClassKey, IntegerKey, OptionKey}
 import org.geotools.filter.identity.FeatureIdImpl
 import org.geotools.geometry.jts.ReferencedEnvelope
 import org.joda.time.DateTime
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.SimpleFeatureType
 import org.opengis.filter.identity.FeatureId
+
+import scala.languageFeature.implicitConversions
 
 /**
  * These are package-wide constants.
@@ -124,7 +124,7 @@ package object index {
   }
 
   class ExplainString extends ExplainerOutputType {
-    private var string: StringBuilder = new StringBuilder()
+    private val string: StringBuilder = new StringBuilder()
     override def apply(v1: => String) = {
       string.append(v1).append('\n')
     }
