@@ -600,6 +600,11 @@
                 <version>1.2</version>
             </dependency>
             <dependency>
+                <groupId>org.scalaz</groupId>
+                <artifactId>scalaz-core_2.10</artifactId>
+                <version>7.1.0</version>
+            </dependency>
+            <dependency>
                 <groupId>com.typesafe</groupId>
                 <artifactId>scalalogging-slf4j_2.10</artifactId>
                 <version>${scalalogging.version}</version>
@@ -819,8 +824,14 @@
             </dependency>
             <dependency>
                 <groupId>org.specs2</groupId>
-                <artifactId>specs2_2.10</artifactId>
-                <version>2.3.13</version>
+                <artifactId>specs2-core_2.10</artifactId>
+                <version>2.4.15</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.specs2</groupId>
+                <artifactId>specs2-junit_2.10</artifactId>
+                <version>2.4.15</version>
                 <scope>test</scope>
             </dependency>
             <dependency>

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package org.locationtech.geomesa.core.iterators
 
 import java.util.{Map => JMap}
@@ -32,10 +31,6 @@ import org.locationtech.geomesa.core.iterators.MapAggregatingIterator.MAP_ATTRIB
 import scala.languageFeature.implicitConversions
 import scala.collection.JavaConverters._
 import scalaz.Scalaz._
-
-object MapAggregatingIteratorResult {
-  implicit def resultToMap(result: MapAggregatingIteratorResult): Map[String, Int] = result.countMap
-}
 
 case class MapAggregatingIteratorResult(mapAttributeName: String,
                                         countMap: Map[String, Int] = Map()) extends Result {
@@ -55,14 +50,13 @@ class MapAggregatingIterator(other: MapAggregatingIterator, env: IteratorEnviron
   override def init(source: SortedKeyValueIterator[Key, Value],
                     options: JMap[String, String],
                     env: IteratorEnvironment): Unit = {
+
     super.init(source, options, env)
 
     mapAttribute = options.get(MapAggregatingIterator.MAP_ATTRIBUTE_KEY)
   }
 
   override def handleKeyValue(resultO: Option[MapAggregatingIteratorResult], topSourceKey: Key, topSourceValue: Value): MapAggregatingIteratorResult = {
-
-    import MapAggregatingIteratorResult._
 
     val feature = originalDecoder.decode(topSourceValue)
     val currCounts = feature.getAttribute(mapAttribute).asInstanceOf[JMap[String, Int]].asScala.toMap //TODO: may be inefficient, figure out mutable/immutable maps
