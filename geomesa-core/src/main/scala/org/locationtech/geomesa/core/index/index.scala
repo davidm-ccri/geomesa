@@ -97,7 +97,7 @@ package object index {
     val TIME_BUCKETS_KEY = new IntegerKey(256)
 
     val MAP_ATTRIBUTE_OPTION_IDENTIFIER = "map_attribute"
-    val AGGREGATE_MAP_KEY = new OptionKey(MAP_ATTRIBUTE_OPTION_IDENTIFIER)
+    val AGGREGATE_MAP_KEY = new ClassKey(classOf[java.lang.String])
   }
 
   type ExplainerOutputType = ( => String) => Unit

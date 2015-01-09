@@ -35,8 +35,7 @@ import org.opengis.feature.simple.SimpleFeatureType
 import scala.util.Random
 
 abstract class GeoMesaAggregatingIterator[T <: Result](val other: GeoMesaAggregatingIterator[T],
-                                   val env: IteratorEnvironment,
-                                   projectedSFTDef: String) extends SortedKeyValueIterator[Key, Value] {
+                                   val env: IteratorEnvironment) extends SortedKeyValueIterator[Key, Value] {
 
   var curRange: ARange = null
   var projectedSFT: SimpleFeatureType = null
@@ -50,6 +49,8 @@ abstract class GeoMesaAggregatingIterator[T <: Result](val other: GeoMesaAggrega
 
   var originalDecoder: SimpleFeatureDecoder = null
   var featureEncoder: SimpleFeatureEncoder = null
+
+  var projectedSFTDef: String = null
 
   if (other != null && env != null) {
     source = other.source.deepCopy(env)

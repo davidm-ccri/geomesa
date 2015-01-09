@@ -49,10 +49,12 @@ case class DensityIteratorResult(geometry: Geometry,
 }
 
 class DensityIterator(other: DensityIterator, env: IteratorEnvironment)
-  extends GeoMesaAggregatingIterator[DensityIteratorResult](other, env, DENSITY_FEATURE_SFT_STRING) {
+  extends GeoMesaAggregatingIterator[DensityIteratorResult](other, env) {
 
   var bbox: ReferencedEnvelope = null
   var snap: GridSnap = null
+
+  projectedSFTDef = DENSITY_FEATURE_SFT_STRING
 
   def this() = this(null, null)
 

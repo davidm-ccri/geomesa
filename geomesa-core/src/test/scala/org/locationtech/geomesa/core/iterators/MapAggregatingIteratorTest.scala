@@ -100,7 +100,7 @@ class MapAggregatingIteratorTest extends Specification {
   def getQuery(query: String): Query = {
     val q = new Query("test", ECQL.toFilter(query))
     //val geom = q.getFilter.accept(ExtractBoundsFilterVisitor.BOUNDS_VISITOR, null).asInstanceOf[Envelope]
-    q.getHints.put(QueryHints.AGGREGATE_MAP_KEY, Set("map").asJava)
+    q.getHints.put(QueryHints.AGGREGATE_MAP_KEY, "map")
 /*    q.getHints.put(QueryHints.BBOX_KEY, new ReferencedEnvelope(geom, DefaultGeographicCRS.WGS84))
     q.getHints.put(QueryHints.WIDTH_KEY, 500)
     q.getHints.put(QueryHints.HEIGHT_KEY, 500)*/
@@ -108,7 +108,7 @@ class MapAggregatingIteratorTest extends Specification {
   }
 
   "CountMapAggregatingIterator" should {
-    val spec = "id:java.lang.Integer,map:java.util.Map,dtg:Date,geom:Geometry:srid=4326"
+    val spec = "id:Integer,map:Map[String,Integer],dtg:Date,geom:Geometry:srid=4326"
     val sft = SimpleFeatureTypes.createType("test", spec)
     sft.getUserData.put(Constants.SF_PROPERTY_START_TIME, "dtg")
     val ds = createDataStore(sft, 0)

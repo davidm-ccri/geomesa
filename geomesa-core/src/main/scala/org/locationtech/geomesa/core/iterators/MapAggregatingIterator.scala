@@ -26,7 +26,6 @@ import org.apache.accumulo.core.iterators.{IteratorEnvironment, SortedKeyValueIt
 import org.geotools.feature.simple.SimpleFeatureBuilder
 import org.geotools.geometry.jts.JTSFactoryFinder
 import org.locationtech.geomesa.core.iterators.GeoMesaAggregatingIterator.Result
-import org.locationtech.geomesa.core.iterators.MapAggregatingIterator.MAP_ATTRIBUTE_FEATURE_STRING
 
 import scala.languageFeature.implicitConversions
 import scala.collection.JavaConverters._
@@ -41,7 +40,7 @@ case class MapAggregatingIteratorResult(mapAttributeName: String,
 }
 
 class MapAggregatingIterator(other: MapAggregatingIterator, env: IteratorEnvironment)
-  extends GeoMesaAggregatingIterator[MapAggregatingIteratorResult](other, env, MAP_ATTRIBUTE_FEATURE_STRING) {
+  extends GeoMesaAggregatingIterator[MapAggregatingIteratorResult](other, env) {
 
   var mapAttribute: String = null
 
@@ -51,9 +50,11 @@ class MapAggregatingIterator(other: MapAggregatingIterator, env: IteratorEnviron
                     options: JMap[String, String],
                     env: IteratorEnvironment): Unit = {
 
-    super.init(source, options, env)
-
     mapAttribute = options.get(MapAggregatingIterator.MAP_ATTRIBUTE_KEY)
+
+    projectedSFTDef = MapAggregatingIterator.sft(mapAttribute)
+
+    super.init(source, options, env)
   }
 
   override def handleKeyValue(resultO: Option[MapAggregatingIteratorResult], topSourceKey: Key, topSourceValue: Value): MapAggregatingIteratorResult = {
@@ -71,7 +72,7 @@ class MapAggregatingIterator(other: MapAggregatingIterator, env: IteratorEnviron
 object MapAggregatingIterator extends Logging {
 
   val MAP_ATTRIBUTE_KEY = "map_attribute"
-  val MAP_ATTRIBUTE_FEATURE_STRING = s"$MAP_ATTRIBUTE_KEY:Map,geom:Point:srid=4326"
+  def sft(mapAttributeName: String) = s"$mapAttributeName:Map,geom:Point:srid=4326"
 
   val geomFactory = JTSFactoryFinder.getGeometryFactory
 

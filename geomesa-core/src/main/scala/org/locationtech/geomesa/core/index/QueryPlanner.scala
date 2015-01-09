@@ -16,6 +16,7 @@
 
 package org.locationtech.geomesa.core.index
 
+import java.util.{Map => JMap}
 import java.util.Map.Entry
 
 import com.vividsolutions.jts.geom._
@@ -27,8 +28,9 @@ import org.locationtech.geomesa.core.data.FeatureEncoding.FeatureEncoding
 import org.locationtech.geomesa.core.data._
 import org.locationtech.geomesa.core.filter._
 import org.locationtech.geomesa.core.index.QueryHints._
+import org.locationtech.geomesa.core.iterators.MapAggregatingIterator._
 import org.locationtech.geomesa.core.iterators.TemporalDensityIterator._
-import org.locationtech.geomesa.core.iterators.{DeDuplicatingIterator, DensityIterator, TemporalDensityIterator}
+import org.locationtech.geomesa.core.iterators.{MapAggregatingIterator, DeDuplicatingIterator, DensityIterator, TemporalDensityIterator}
 import org.locationtech.geomesa.core.util.CloseableIterator._
 import org.locationtech.geomesa.core.util.{CloseableIterator, SelfClosingIterator}
 import org.locationtech.geomesa.feature.AvroSimpleFeatureFactory
@@ -36,7 +38,9 @@ import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.opengis.filter.sort.{SortBy, SortOrder}
 
+import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
+import scalaz.Scalaz._
 
 object QueryPlanner {
   val iteratorPriority_RowRegex                        = 0
@@ -172,6 +176,25 @@ case class QueryPlanner(schema: String,
       val result = featureBuilder.buildFeature(null)
 
       List(result).iterator
+    } else if (query.getHints.containsKey(AGGREGATE_MAP_KEY)) {
+      val maps = accumuloIterator.map { kv =>
+        decoder
+          .decode(kv.getValue)
+          .getAttribute(query.getHints.containsKey(MAP_ATTRIBUTE_KEY).asInstanceOf[String])
+          .asInstanceOf[JMap[String,Int]]
+          .asScala
+          .toMap // TODO: Slow?
+      }
+
+      val reducedMap = maps.reduce(_ |+| _)
+
+      val featureBuilder = AvroSimpleFeatureFactory.featureBuilder(returnSFT)
+      featureBuilder.reset()
+      featureBuilder.add(reducedMap)
+      featureBuilder.add(QueryPlanner.zeroPoint) //Filler value as Feature requires a geometry
+      val result = featureBuilder.buildFeature(null)
+
+      List(result).iterator
     } else {
       val features = accumuloIterator.map { kv => decoder.decode(kv.getValue) }
       if(query.getSortBy != null && query.getSortBy.length > 0) sort(features, query.getSortBy)
@@ -211,6 +234,8 @@ case class QueryPlanner(schema: String,
         SimpleFeatureTypes.createType(featureType.getTypeName, DensityIterator.DENSITY_FEATURE_SFT_STRING)
       case _: Query if query.getHints.containsKey(TEMPORAL_DENSITY_KEY)  =>
         SimpleFeatureTypes.createType(featureType.getTypeName, TemporalDensityIterator.TEMPORAL_DENSITY_FEATURE_STRING)
+      case _: Query if query.getHints.containsKey(AGGREGATE_MAP_KEY)  =>
+        SimpleFeatureTypes.createType(featureType.getTypeName, MapAggregatingIterator.sft(query.getHints.get(AGGREGATE_MAP_KEY).asInstanceOf[String]))
       case _: Query if query.getHints.get(TRANSFORM_SCHEMA) != null =>
         query.getHints.get(TRANSFORM_SCHEMA).asInstanceOf[SimpleFeatureType]
       case _ => featureType
