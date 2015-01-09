@@ -180,7 +180,7 @@ case class QueryPlanner(schema: String,
       val maps = accumuloIterator.map { kv =>
         decoder
           .decode(kv.getValue)
-          .getAttribute(query.getHints.containsKey(MAP_ATTRIBUTE_KEY).asInstanceOf[String])
+          .getAttribute(query.getHints.get(AGGREGATE_MAP_KEY).asInstanceOf[String])
           .asInstanceOf[JMap[String,Int]]
           .asScala
           .toMap // TODO: Slow?

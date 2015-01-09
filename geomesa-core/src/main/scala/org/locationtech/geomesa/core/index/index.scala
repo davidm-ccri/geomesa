@@ -19,7 +19,7 @@ package org.locationtech.geomesa.core
 import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.data.{Key, Range => AccRange, Value}
 import org.geotools.data.Query
-import org.geotools.factory.Hints.{ClassKey, IntegerKey, OptionKey}
+import org.geotools.factory.Hints.{ClassKey, IntegerKey}
 import org.geotools.filter.identity.FeatureIdImpl
 import org.geotools.geometry.jts.ReferencedEnvelope
 import org.joda.time.DateTime

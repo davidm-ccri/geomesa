@@ -72,7 +72,7 @@ class MapAggregatingIterator(other: MapAggregatingIterator, env: IteratorEnviron
 object MapAggregatingIterator extends Logging {
 
   val MAP_ATTRIBUTE_KEY = "map_attribute"
-  def sft(mapAttributeName: String) = s"$mapAttributeName:Map,geom:Point:srid=4326"
+  def sft(mapAttributeName: String) = s"$mapAttributeName:Map[String,Integer],geom:Point:srid=4326"
 
   val geomFactory = JTSFactoryFinder.getGeometryFactory
 
