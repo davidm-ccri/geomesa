@@ -96,7 +96,6 @@ package object index {
     val TIME_INTERVAL_KEY = new ClassKey(classOf[org.joda.time.Interval])
     val TIME_BUCKETS_KEY = new IntegerKey(256)
 
-    val MAP_ATTRIBUTE_OPTION_IDENTIFIER = "map_attribute"
     val AGGREGATE_MAP_KEY = new ClassKey(classOf[java.lang.String])
   }
 

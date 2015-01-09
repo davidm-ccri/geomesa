@@ -29,6 +29,7 @@ import org.apache.accumulo.core.iterators.{IteratorEnvironment, SortedKeyValueIt
 import org.apache.commons.codec.binary.Base64
 import org.geotools.feature.simple.SimpleFeatureBuilder
 import org.geotools.geometry.jts.{JTS, JTSFactoryFinder, ReferencedEnvelope}
+import org.locationtech.geomesa.core.index.{IndexSchema, IndexEntryDecoder}
 import org.locationtech.geomesa.core.iterators.DensityIterator.{DENSITY_FEATURE_SFT_STRING, SparseMatrix}
 import org.locationtech.geomesa.core.iterators.GeoMesaAggregatingIterator._
 import org.locationtech.geomesa.feature.AvroSimpleFeatureFactory
@@ -36,6 +37,7 @@ import org.locationtech.geomesa.utils.geotools.Conversions.{RichSimpleFeature, t
 import org.locationtech.geomesa.utils.geotools.{GridSnap, SimpleFeatureTypes}
 import org.locationtech.geomesa.utils.text.WKTUtils
 import org.opengis.feature.simple.SimpleFeature
+import org.locationtech.geomesa.core._
 
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Success, Try}
@@ -50,6 +52,8 @@ case class DensityIteratorResult(geometry: Geometry,
 
 class DensityIterator(other: DensityIterator, env: IteratorEnvironment)
   extends GeoMesaAggregatingIterator[DensityIteratorResult](other, env) {
+
+  protected var decoder: IndexEntryDecoder = null
 
   var bbox: ReferencedEnvelope = null
   var snap: GridSnap = null
@@ -66,6 +70,9 @@ class DensityIterator(other: DensityIterator, env: IteratorEnvironment)
     bbox = JTS.toEnvelope(WKTUtils.read(options.get(DensityIterator.BBOX_KEY)))
     val (w, h) = DensityIterator.getBounds(options)
     snap = new GridSnap(bbox, w, h)
+
+    val schemaEncoding = options.get(DEFAULT_SCHEMA_NAME)
+    decoder = IndexSchema.getIndexEntryDecoder(schemaEncoding)
   }
 
   override def handleKeyValue(resultO: Option[DensityIteratorResult],

@@ -19,6 +19,7 @@ package org.locationtech.geomesa.core.iterators
 
 import java.io.{Serializable => JSerializable}
 import java.util.Date
+import java.util.{Map => JMap}
 
 import org.apache.accumulo.core.client.mock.MockInstance
 import org.apache.accumulo.core.client.security.tokens.PasswordToken
@@ -134,7 +135,7 @@ class MapAggregatingIteratorTest extends Specification {
 
       iter.length should beEqualTo(1)
 
-      val aggregated = iter.map(_.getAttribute("map").asInstanceOf[Map[String, Int]]).head
+      val aggregated = iter.map(_.getAttribute("map").asInstanceOf[JMap[String, Int]].asScala).head
 
       aggregated("a") should be equalTo (0 until 150).sum
 
@@ -179,18 +180,18 @@ class MapAggregatingIteratorTest extends Specification {
 
       iter.length should beEqualTo(1)
 
-      val aggregated = iter.map(_.getAttribute("map").asInstanceOf[Map[String, Int]]).head
+      val aggregated = iter.map(_.getAttribute("map").asInstanceOf[JMap[String, Int]].asScala).head
 
-      aggregated("a") should be equalTo (0 until 150).sum
+      aggregated("a") should be equalTo (0 until 100).sum
 
-      aggregated("b") should be equalTo (0 until 150).map(_ * 2).sum
+      aggregated("b") should be equalTo (0 until 100).map(_ * 2).sum
 
       val c = aggregated("c")
-      c should be lessThanOrEqualTo 150 * 10
+      c should be lessThanOrEqualTo 100 * 10
       c should be greaterThanOrEqualTo 0
 
       val d = aggregated("d")
-      d should be lessThanOrEqualTo 150 * 10
+      d should be lessThanOrEqualTo 100 * 10
       d should be greaterThanOrEqualTo 0
     }
 
@@ -215,7 +216,7 @@ class MapAggregatingIteratorTest extends Specification {
 
       iter.length should beEqualTo(1)
 
-      val aggregated = iter.map(_.getAttribute("map").asInstanceOf[Map[String, Int]]).head
+      val aggregated = iter.map(_.getAttribute("map").asInstanceOf[JMap[String, Int]].asScala).head
 
       aggregated("a") should be equalTo 0
 
@@ -267,7 +268,7 @@ class MapAggregatingIteratorTest extends Specification {
 
       iter.length should beEqualTo(1)
 
-      val aggregated = iter.map(_.getAttribute("map").asInstanceOf[Map[String, Int]]).head
+      val aggregated = iter.map(_.getAttribute("map").asInstanceOf[JMap[String, Int]].asScala).head
 
       aggregated("a") should be equalTo 10
       aggregated("b") should be equalTo 6

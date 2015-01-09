@@ -126,7 +126,7 @@ trait Strategy {
                     geometryToCover: Geometry,
                     schema: String,
                     featureEncoding: FeatureEncoding,
-                    featureType: SimpleFeatureType) = {
+                    featureType: SimpleFeatureType) =
     if (query.getHints.containsKey(DENSITY_KEY)) {
       val clazz = classOf[DensityIterator]
 
@@ -145,8 +145,7 @@ trait Strategy {
       configureFeatureType(cfg, featureType)
 
       Some(cfg)
-    }
-    else if (query.getHints.containsKey(TEMPORAL_DENSITY_KEY)){
+    } else if (query.getHints.containsKey(TEMPORAL_DENSITY_KEY)) {
       val clazz = classOf[TemporalDensityIterator]
 
       val cfg = new IteratorSetting(iteratorPriority_AnalysisIterator,
@@ -162,6 +161,21 @@ trait Strategy {
       configureFeatureType(cfg, featureType)
 
       Some(cfg)
+    } else if (query.getHints.containsKey(AGGREGATE_MAP_KEY)){
+      val clazz = classOf[MapAggregatingIterator]
+
+      val cfg = new IteratorSetting(iteratorPriority_AnalysisIterator,
+        "topfilter-" + randomPrintableString(5),
+        clazz)
+
+      val mapAttribute = query.getHints.get(AGGREGATE_MAP_KEY).asInstanceOf[String]
+
+      MapAggregatingIterator.configure(cfg, mapAttribute)
+
+
+      configureFeatureEncoding(cfg, featureEncoding)
+      configureFeatureType(cfg, featureType)
+
+      Some(cfg)
     } else None
-  }
 }

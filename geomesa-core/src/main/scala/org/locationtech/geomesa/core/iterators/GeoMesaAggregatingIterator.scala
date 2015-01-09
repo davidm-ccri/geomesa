@@ -42,7 +42,6 @@ abstract class GeoMesaAggregatingIterator[T <: Result](val other: GeoMesaAggrega
   var featureBuilder: SimpleFeatureBuilder = null
   var topKey: Option[Key] = None
   var topValue: Option[Value] = None
-  protected var decoder: IndexEntryDecoder = null
 
   var simpleFeatureType: SimpleFeatureType = null
   var source: SortedKeyValueIterator[Key,Value] = null
@@ -76,8 +75,6 @@ abstract class GeoMesaAggregatingIterator[T <: Result](val other: GeoMesaAggrega
     // a sparse matrix as the result type of this iterator
     featureEncoder = SimpleFeatureEncoder(projectedSFT, encodingOpt)
     featureBuilder = AvroSimpleFeatureFactory.featureBuilder(projectedSFT)
-    val schemaEncoding = options.get(DEFAULT_SCHEMA_NAME)
-    decoder = IndexSchema.getIndexEntryDecoder(schemaEncoding)
   }
 
 
