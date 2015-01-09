@@ -65,7 +65,8 @@ class ScaldingDelimitedIngestJobTest extends Specification{
       IngestParams.ACCUMULO_PASSWORD -> List("mypassword"),
       IngestParams.ACCUMULO_MOCK -> List("true"),
       IngestParams.IS_TEST_INGEST -> List("true"),
-      IngestParams.LIST_DELIMITER -> List(","))
+      IngestParams.LIST_DELIMITER -> List(","),
+      IngestParams.MAP_DELIMITERS -> List(",", ";"))
   }
 
   def csvWktParams: Map[String, List[String]] = {
@@ -87,7 +88,8 @@ class ScaldingDelimitedIngestJobTest extends Specification{
       IngestParams.ACCUMULO_PASSWORD -> List("mypassword"),
       IngestParams.ACCUMULO_MOCK -> List("true"),
       IngestParams.IS_TEST_INGEST -> List("true"),
-      IngestParams.LIST_DELIMITER -> List(","))
+      IngestParams.LIST_DELIMITER -> List(","),
+      IngestParams.MAP_DELIMITERS -> List(",", ";"))
   }
 
   def currentCatalog = f"DelimitedIngestTestTableUnique$id%d"
@@ -445,6 +447,60 @@ class ScaldingDelimitedIngestJobTest extends Specification{
       }
       doTest("/test_list.csv", "csv", "csvFeature")
       doTest("/test_list.tsv", "tsv", "tsvFeature")
+      success
+    }
+
+    "ingest a map from a file" in {
+      def doTest(testFileName: String, format: String, featureName: String) = {
+        val path = Runner.getClass.getResource(testFileName)
+        val ingest = new ScaldingDelimitedIngestJob(new Args(csvNormParams.updated(IngestParams.SFT_SPEC,
+          List("i:Integer,numbers:Map[Integer,String],time:Date,lon:Double,lat:Double,*geom:Point:srid=4326"))
+          .updated(IngestParams.FORMAT, List(format))
+          .updated(IngestParams.FEATURE_NAME, List(featureName))))
+
+        ingest.runTestIngest(Source.fromFile(path.toURI).getLines()) must beASuccessfulTry
+
+        val values = ds.getFeatureSource(featureName).getFeatures.features().map { sf =>
+          // must convert list to scala list for equality tests below
+          sf.get[Integer]("i") -> sf.get[java.util.Map[Integer, String]]("numbers").toMap
+        }.toMap
+
+        values(1) mustEqual Map(1 -> "a", 2 -> "b", 3 -> "c", 4 -> "d")
+        values(2) mustEqual Map(5 -> "e", 6 -> "f", 7 -> "g", 8 -> "h")
+        values(3) mustEqual Map(9 -> "i", 10 -> "j")
+        values(4) mustEqual Map(11 -> "k")
+        values(5) mustEqual Map()
+        values(6) mustEqual Map(111 -> "y", 222 -> "zz")
+      }
+      doTest("/test_map.csv", "csv", "csvFeature")
+      doTest("/test_map.tsv", "tsv", "tsvFeature")
+      success
+    }
+
+    "ingest a map with custom delimiters from a file" in {
+      def doTest(testFileName: String, format: String, featureName: String) = {
+        val path = Runner.getClass.getResource(testFileName)
+        val ingest = new ScaldingDelimitedIngestJob(new Args(csvNormParams.updated(IngestParams.SFT_SPEC,
+          List("i:Integer,numbers:Map[Integer,String],time:Date,lon:Double,lat:Double,*geom:Point:srid=4326"))
+          .updated(IngestParams.FORMAT, List(format))
+          .updated(IngestParams.FEATURE_NAME, List(featureName))
+          .updated(IngestParams.MAP_DELIMITERS, List(":", "_"))))
+
+        ingest.runTestIngest(Source.fromFile(path.toURI).getLines()) must beASuccessfulTry
+
+        val values = ds.getFeatureSource(featureName).getFeatures.features().map { sf =>
+          // must convert list to scala list for equality tests below
+          sf.get[Integer]("i") -> sf.get[java.util.Map[Integer, String]]("numbers").toMap
+        }.toMap
+
+        values(1) mustEqual Map(1 -> "a", 2 -> "b", 3 -> "c", 4 -> "d")
+        values(2) mustEqual Map(5 -> "e", 6 -> "f", 7 -> "g", 8 -> "h")
+        values(3) mustEqual Map(9 -> "i", 10 -> "j")
+        values(4) mustEqual Map(11 -> "k")
+        values(5) mustEqual Map()
+        values(6) mustEqual Map(111 -> "y", 222 -> "zz")
+      }
+      doTest("/test_map_custom_delimiters.csv", "csv", "csvFeature")
       success
     }
 

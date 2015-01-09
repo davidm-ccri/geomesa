@@ -38,8 +38,7 @@ import org.locationtech.geomesa.tools.Utils.IngestParams
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.`type`.AttributeDescriptor
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
-import ScaldingDelimitedIngestJob.toList
-import ScaldingDelimitedIngestJob.isList
+import ScaldingDelimitedIngestJob._
 
 import scala.util.parsing.combinator.JavaTokenParsers
 import scala.util.{Failure, Success, Try}
@@ -64,6 +63,7 @@ class ScaldingDelimitedIngestJob(args: Args) extends Job(args) with Logging {
   lazy val isTestRun        = args(IngestParams.IS_TEST_INGEST).toBoolean
   lazy val featureName      = args(IngestParams.FEATURE_NAME)
   lazy val listDelimiter    = args(IngestParams.LIST_DELIMITER).charAt(0)
+  lazy val mapDelimiters    = args.list(IngestParams.MAP_DELIMITERS).map(_.charAt(0))
 
   //Data Store parameters
   lazy val dsConfig =
@@ -179,6 +179,8 @@ class ScaldingDelimitedIngestJob(args: Args) extends Job(args) with Logging {
     for (idx <- 0 until fields.length) {
       if (isList(sft.getAttributeDescriptors.get(idx))) {
         feature.setAttribute(idx, toList(fields(idx), listDelimiter, sft.getAttributeDescriptors.get(idx)))
+      } else if (isMap(sft.getAttributeDescriptors.get(idx))) {
+        feature.setAttribute(idx, toMap(fields(idx), mapDelimiters(0), mapDelimiters(1), sft.getAttributeDescriptors.get(idx)))
       } else {
         feature.setAttribute(idx, fields(idx))
       }
@@ -188,8 +190,8 @@ class ScaldingDelimitedIngestJob(args: Args) extends Job(args) with Logging {
 
     // Support for point data method
     import org.locationtech.geomesa.utils.geotools.Conversions.RichSimpleFeature
-    val lon = lonField.map(feature.get[Double](_))
-    val lat = latField.map(feature.get[Double](_))
+    val lon = lonField.map(feature.get[Double])
+    val lat = latField.map(feature.get[Double])
     (lon, lat) match {
       case (Some(x), Some(y)) => feature.setDefaultGeometry(geomFactory.createPoint(new Coordinate(x, y)))
       case _                  =>
@@ -261,6 +263,20 @@ object ScaldingDelimitedIngestJob {
       s.split(delim).map(_.trim).map { value =>
         Converters.convert(value, clazz).asInstanceOf[AnyRef]
       }.toList
+    }
+  }
+
+  def isMap(ad: AttributeDescriptor) = classOf[java.util.Map[_, _]].isAssignableFrom(ad.getType.getBinding)
+
+  def toMap(s: String, delimBetweenKeysAndValues: Char, delimBetweenKeyValuePairs: Char, ad: AttributeDescriptor) = {
+    val (keyClass, valueClass) = SimpleFeatureTypes.getMapTypes(ad).get
+    if (s.isEmpty) Map()
+    else {
+      s.split(delimBetweenKeyValuePairs)
+        .map(_.split(delimBetweenKeysAndValues).map(_.trim))
+        .map { case Array(key, value) =>
+        (Converters.convert(key, keyClass).asInstanceOf[AnyRef], Converters.convert(value, valueClass).asInstanceOf[AnyRef])
+      }.toMap
     }
   }
 }

@@ -70,6 +70,18 @@ object SimpleFeatureTypes {
   def getCollectionType(ad: AttributeDescriptor): Option[Class[_]] =
     Option(ad.getUserData.get("subtype")).map(_.asInstanceOf[Class[_]])
 
+  def setMapTypes(ad: AttributeDescriptor, keyType: Class[_], valueType: Class[_]): Unit = {
+    ad.getUserData.put("keyclass", keyType)
+    ad.getUserData.put("valueclass", valueType)
+  }
+
+  def getMapTypes(ad: AttributeDescriptor): Option[(Class[_], Class[_])] =
+    Option(ad.getUserData.get("keyclass")).flatMap { keyClass =>
+      Option(ad.getUserData.get("valueclass")).map { valueClass =>
+        (keyClass.asInstanceOf[Class[_]], valueClass.asInstanceOf[Class[_]])
+      }
+    }
+
   def encodeType(sft: SimpleFeatureType): String =
     sft.getAttributeDescriptors.map { ad => AttributeSpecFactory.fromAttributeDescriptor(sft, ad).toSpec }.mkString(",")
 
